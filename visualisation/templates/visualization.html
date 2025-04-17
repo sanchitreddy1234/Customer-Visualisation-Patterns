@@ -1,0 +1,457 @@
+{% extends "base.html" %}
+
+{% block title %}Visualize Data - Data Visualization App{% endblock %}
+
+{% block extra_head %}
+<style>
+    .plot-container {
+        text-align: center;
+        margin-top: 2rem;
+    }
+    .plot-container img {
+        max-width: 100%;
+        height: auto;
+        box-shadow: 0 0.25rem 0.5rem rgba(0, 0, 0, 0.1);
+        border-radius: 0.25rem;
+    }
+    .plot-options {
+        display: none;
+    }
+    .option-card {
+        transition: all 0.2s ease;
+    }
+    .option-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 0.25rem 0.5rem rgba(0, 0, 0, 0.1);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-4">
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="bi bi-graph-up"></i> Visualization Options</h5>
+            </div>
+            <div class="card-body">
+                <form action="{{ url_for('visualization') }}" method="POST" id="visualizationForm">
+                    <!-- Plot Type Selection -->
+                    <div class="mb-3">
+                        <label for="plot_type" class="form-label">Select Plot Type</label>
+                        <select class="form-select" id="plot_type" name="plot_type" required>
+                            <option value="" selected disabled>Select plot type...</option>
+                            <option value="scatter">Scatter Plot</option>
+                            <option value="line">Line Plot</option>
+                            <option value="bar">Bar Plot</option>
+                            <option value="hist">Histogram</option>
+                            <option value="box">Box Plot</option>
+                            <option value="violin">Violin Plot</option>
+                            <option value="count">Count Plot</option>
+                            <option value="heatmap">Heatmap</option>
+                            <option value="pie">Pie Chart</option>
+                            <option value="density">Density Plot</option>
+                        </select>
+                    </div>
+                    <hr>
+                    <!-- X-axis Variable -->
+                    <!-- <div class="mb-3 plot-options" id="x_options"> -->
+                        <label for="x_column" class="form-label">X-axis Variable</label>
+                        <select class="form-select" id="x_column" name="x_column">
+                            <option value="" selected disabled>Select column...</option>
+                            {% for col in columns %}
+                            <option value="{{ col }}">{{ col }}</option>
+                            {% endfor %}
+                        </select>
+                    <!-- </div> -->
+                    <hr>
+                    <!-- Y-axis Variable -->
+                    <!-- <div class="mb-3 plot-options" id="y_options"> -->
+                        <label for="y_column" class="form-label">Y-axis Variable....</label>
+                        <select class="form-select" id="y_column" name="y_column">
+                            <option value="" selected disabled>Select column...</option>
+                            {% for col in numeric_cols %}
+                            <option value="{{ col }}">{{ col }}</option>
+                            {% endfor %}
+                        </select>
+                    <!-- </div> -->
+                    
+                    <!-- Group/Color Variable -->
+                    <!-- <div class="mb-3 plot-options" id="hue_options"> -->
+                        <label for="hue_column" class="form-label">Group/Color Variable (optional)</label>
+                        <select class="form-select" id="hue_column" name="hue_column">
+                            <option value="none" selected>None</option>
+                            {% for col in categorical_cols %}
+                            <option value="{{ col }}">{{ col }}</option>
+                            {% endfor %}
+                        </select>
+                    <!-- </div> -->
+                    
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-primary" id="generatePlotBtn">
+                            <i class="bi bi-bar-chart"></i> Generate Plot
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <!-- Plot Type Info -->
+        <!-- <div class="card mb-4">
+            <div class="card-header bg-info text-white">
+                <h5 class="mb-0">Plot Information</h5>
+            </div>
+            <div class="card-body">
+                <div id="plotInfo">
+                    <p>Select a plot type to see information about it.</p>
+                </div>
+            </div>
+        </div>
+         -->
+        <!-- Quick Plot Suggestions -->
+        <!-- <div class="card mb-4">
+            <div class="card-header bg-success text-white">
+                <h5 class="mb-0">Quick Plot Suggestions</h5>
+            </div>
+            <div class="card-body">
+                <div class="row g-2">
+                    {% if numeric_cols|length > 1 %}
+                    <div class="col-12">
+                        <div class="card option-card">
+                            <div class="card-body py-2">
+                                <button class="btn btn-sm btn-outline-primary w-100" 
+                                   onclick="quickPlot('heatmap', '{{ numeric_cols[0] }}', '{{ numeric_cols[0] }}')">
+                                    <i class="bi bi-grid-3x3"></i> Correlation Heatmap
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                    
+                    {% if numeric_cols %}
+                    <div class="col-6">
+                        <div class="card option-card">
+                            <div class="card-body py-2">
+                                <button class="btn btn-sm btn-outline-primary w-100" 
+                                   onclick="quickPlot('hist', '{{ numeric_cols[0] }}')">
+                                    <i class="bi bi-bar-chart"></i> Histogram
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                    
+                    {% if categorical_cols %}
+                    <div class="col-6">
+                        <div class="card option-card">
+                            <div class="card-body py-2">
+                                <button class="btn btn-sm btn-outline-primary w-100" 
+                                   onclick="quickPlot('count', '{{ categorical_cols[0] }}')">
+                                    <i class="bi bi-bar-chart-steps"></i> Count Plot
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                    
+                    {% if numeric_cols and categorical_cols %}
+                    <div class="col-6">
+                        <div class="card option-card">
+                            <div class="card-body py-2">
+                                <button class="btn btn-sm btn-outline-primary w-100" 
+                                   onclick="quickPlot('box', '{{ categorical_cols[0] }}', '{{ numeric_cols[0] }}')">
+                                    <i class="bi bi-box"></i> Box Plot
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="card option-card">
+                            <div class="card-body py-2">
+                                <button class="btn btn-sm btn-outline-primary w-100" 
+                                   onclick="quickPlot('bar', '{{ categorical_cols[0] }}', '{{ numeric_cols[0] }}')">
+                                    <i class="bi bi-bar-chart-line"></i> Bar Plot
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div> -->
+    </div>
+    
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0" id="plotTitle">
+                    <i class="bi bi-image"></i> Plot Display
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="plot-container" id="plotContainer">
+                    {% if plot_url %}
+                    <img src="data:image/png;base64,{{ plot_url }}" alt="Generated Plot" />
+                    <div class="mt-3">
+                        <h5>Plot Details</h5>
+                        <ul class="list-group">
+                            <li class="list-group-item"><strong>Plot Type:</strong> {{ plot_type|capitalize }}</li>
+                            <li class="list-group-item"><strong>X-axis:</strong> {{ x_column }}</li>
+                            {% if y_column %}
+                            <li class="list-group-item"><strong>Y-axis:</strong> {{ y_column }}</li>
+                            {% endif %}
+                            {% if hue_column and hue_column != 'none' %}
+                            <li class="list-group-item"><strong>Group/Color:</strong> {{ hue_column }}</li>
+                            {% endif %}
+                        </ul>
+                    </div>
+                    {% else %}
+                    <div class="text-center py-5">
+                        <i class="bi bi-bar-chart" style="font-size: 4rem; color: #dee2e6;"></i>
+                        <p class="mt-3">Select visualization options and click "Generate Plot" to create a visualization.</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const plotTypeSelect = document.getElementById('plot_type');
+        const xOptions = document.getElementById('x_options');
+        const yOptions = document.getElementById('y_options');
+        const hueOptions = document.getElementById('hue_options');
+        const plotInfo = document.getElementById('plotInfo');
+        
+        // Set initial state if there's a plot already
+        {% if plot_type %}
+        plotTypeSelect.value = '{{ plot_type }}';
+        updatePlotOptions('{{ plot_type }}');
+        document.getElementById('x_column').value = '{{ x_column }}';
+        {% if y_column %}
+        document.getElementById('y_column').value = '{{ y_column }}';
+        {% endif %}
+        {% if hue_column %}
+        document.getElementById('hue_column').value = '{{ hue_column }}';
+        {% endif %}
+        {% endif %}
+        
+        // Update form fields based on plot type
+        plotTypeSelect.addEventListener('change', function() {
+            const plotType = this.value;
+            updatePlotOptions(plotType);
+        });
+        
+        // Form validation
+        document.getElementById('visualizationForm').addEventListener('submit', function(event) {
+            const plotType = plotTypeSelect.value;
+            const xColumn = document.getElementById('x_column').value;
+            const yColumn = document.getElementById('y_column').value;
+            
+            if (plotType === '') {
+                event.preventDefault();
+                alert('Please select a plot type.');
+                return;
+            }
+            
+            if (plotType !== 'hist' && plotType !== 'pie' && plotType !== 'density' && plotType !== 'count' && xColumn === '') {
+                event.preventDefault();
+                alert('Please select an X-axis variable.');
+                return;
+            }
+            
+            if ((plotType === 'scatter' || plotType === 'line' || plotType === 'bar' || 
+                 plotType === 'box' || plotType === 'violin' || plotType === 'heatmap') && yColumn === '') {
+                event.preventDefault();
+                alert('Please select a Y-axis variable.');
+                return;
+            }
+        });
+    });
+    
+    function updatePlotOptions(plotType) {
+        const xOptions = document.getElementById('x_options');
+        const yOptions = document.getElementById('y_options');
+        const hueOptions = document.getElementById('hue_options');
+        const xColumnSelect = document.getElementById('x_column');
+        const yColumnSelect = document.getElementById('y_column');
+        const plotInfo = document.getElementById('plotInfo');
+        
+        // Reset options
+        xOptions.style.display = 'none';
+        yOptions.style.display = 'none';
+        hueOptions.style.display = 'none';
+        
+        // Update options based on plot type
+        switch (plotType) {
+            case 'scatter':
+                xOptions.style.display = 'block';
+                yOptions.style.display = 'block';
+                hueOptions.style.display = 'block';
+                updateXOptions('numeric');
+                updateYOptions('numeric');
+                plotInfo.innerHTML = '<p><strong>Scatter Plot</strong> shows the relationship between two numeric variables, with each point representing one observation.</p>';
+                break;
+                
+            case 'line':
+                xOptions.style.display = 'block';
+                yOptions.style.display = 'block';
+                hueOptions.style.display = 'block';
+                updateXOptions('all');
+                updateYOptions('numeric');
+                plotInfo.innerHTML = '<p><strong>Line Plot</strong> displays data points connected by straight line segments, useful for showing trends over time or ordered categories.</p>';
+                break;
+                
+            case 'bar':
+                xOptions.style.display = 'block';
+                yOptions.style.display = 'block';
+                hueOptions.style.display = 'block';
+                updateXOptions('categorical');
+                updateYOptions('numeric');
+                plotInfo.innerHTML = '<p><strong>Bar Plot</strong> uses rectangular bars to represent the relationship between a categorical variable and a numeric variable.</p>';
+                break;
+                
+            case 'hist':
+                xOptions.style.display = 'block';
+                yOptions.style.display = 'none';
+                hueOptions.style.display = 'none';
+                updateXOptions('numeric');
+                plotInfo.innerHTML = '<p><strong>Histogram</strong> shows the distribution of a single numeric variable by dividing the data into bins and counting the number of observations in each bin.</p>';
+                break;
+                
+            case 'box':
+                xOptions.style.display = 'block';
+                yOptions.style.display = 'block';
+                hueOptions.style.display = 'block';
+                updateXOptions('categorical');
+                updateYOptions('numeric');
+                plotInfo.innerHTML = '<p><strong>Box Plot</strong> shows the distribution of a numeric variable across categories, displaying median, quartiles, and potential outliers.</p>';
+                break;
+                
+            case 'violin':
+                xOptions.style.display = 'block';
+                yOptions.style.display = 'block';
+                hueOptions.style.display = 'block';
+                updateXOptions('categorical');
+                updateYOptions('numeric');
+                plotInfo.innerHTML = '<p><strong>Violin Plot</strong> is similar to a box plot but also shows the probability density of the data at different values.</p>';
+                break;
+                
+            case 'count':
+                xOptions.style.display = 'block';
+                yOptions.style.display = 'none';
+                hueOptions.style.display = 'block';
+                updateXOptions('categorical');
+                plotInfo.innerHTML = '<p><strong>Count Plot</strong> shows the frequency of observations in each category of a categorical variable.</p>';
+                break;
+                
+            case 'heatmap':
+                xOptions.style.display = 'block';
+                yOptions.style.display = 'block';
+                hueOptions.style.display = 'block';
+                updateXOptions('all');
+                updateYOptions('numeric');
+                plotInfo.innerHTML = '<p><strong>Heatmap</strong> uses color intensity to show the relationship between variables. If X=Y, it will show a correlation matrix of numeric columns.</p>';
+                break;
+                
+            case 'pie':
+                xOptions.style.display = 'block';
+                yOptions.style.display = 'none';
+                hueOptions.style.display = 'none';
+                updateXOptions('categorical');
+                plotInfo.innerHTML = '<p><strong>Pie Chart</strong> shows the proportion of each category as a slice of a circular "pie". Best for data with few categories.</p>';
+                break;
+                
+            case 'density':
+                xOptions.style.display = 'block';
+                yOptions.style.display = 'none';
+                hueOptions.style.display = 'block';
+                updateXOptions('numeric');
+                plotInfo.innerHTML = '<p><strong>Density Plot</strong> shows the distribution of a numeric variable using a smooth curve, similar to a smoothed histogram.</p>';
+                break;
+                
+            default:
+                plotInfo.innerHTML = '<p>Select a plot type to see information about it.</p>';
+                break;
+        }
+    }
+    
+    function updateXOptions(type) {
+        const xColumnSelect = document.getElementById('x_column');
+        // Clear current options (except the placeholder)
+        while (xColumnSelect.options.length > 1) {
+            xColumnSelect.remove(1);
+        }
+        
+        // Add appropriate options
+        if (type === 'numeric') {
+            {% for col in numeric_cols %}
+            const option = new Option('{{ col }}', '{{ col }}');
+            xColumnSelect.add(option);
+            {% endfor %}
+        } else if (type === 'categorical') {
+            {% for col in categorical_cols %}
+            const option = new Option('{{ col }}', '{{ col }}');
+            xColumnSelect.add(option);
+            {% endfor %}
+        } else {
+            // All columns
+            {% for col in columns %}
+            const option = new Option('{{ col }}', '{{ col }}');
+            xColumnSelect.add(option);
+            {% endfor %}
+        }
+    }
+    
+    function updateYOptions(type) {
+        const yColumnSelect = document.getElementById('y_column');
+        // Clear current options (except the placeholder)
+        while (yColumnSelect.options.length > 1) {
+            yColumnSelect.remove(1);
+        }
+        
+        // Add appropriate options
+        if (type === 'numeric') {
+            {% for col in numeric_cols %}
+            const option = new Option('{{ col }}', '{{ col }}');
+            yColumnSelect.add(option);
+            {% endfor %}
+        } else if (type === 'categorical') {
+            {% for col in categorical_cols %}
+            const option = new Option('{{ col }}', '{{ col }}');
+            yColumnSelect.add(option);
+            {% endfor %}
+        } else {
+            // All columns
+            {% for col in columns %}
+            const option = new Option('{{ col }}', '{{ col }}');
+            yColumnSelect.add(option);
+            {% endfor %}
+        }
+    }
+    
+    function quickPlot(plotType, xColumn, yColumn = null, hueColumn = null) {
+        const form = document.getElementById('visualizationForm');
+        document.getElementById('plot_type').value = plotType;
+        updatePlotOptions(plotType);
+        
+        document.getElementById('x_column').value = xColumn;
+        
+        if (yColumn) {
+            document.getElementById('y_column').value = yColumn;
+        }
+        
+        if (hueColumn) {
+            document.getElementById('hue_column').value = hueColumn;
+        } else {
+            document.getElementById('hue_column').value = 'none';
+        }
+        
+        form.submit();
+    }
+</script>
+{% endblock %}

@@ -1,0 +1,48 @@
+<!-- 404.html -->
+{% extends "base.html" %}
+
+{% block title %}Page Not Found - Data Visualization App{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6 text-center">
+        <div class="card">
+            <div class="card-body">
+                <i class="bi bi-exclamation-triangle text-warning" style="font-size: 4rem;"></i>
+                <h1 class="mt-3">404</h1>
+                <h3>Page Not Found</h3>
+                <p class="mb-4">The page you are looking for does not exist or has been moved.</p>
+                <a href="{{ url_for('index') }}" class="btn btn-primary">
+                    <i class="bi bi-house"></i> Go to Homepage
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+<!-- 500.html -->
+{% extends "base.html" %}
+
+{% block title %}Server Error - Data Visualization App{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6 text-center">
+        <div class="card">
+            <div class="card-body">
+                <i class="bi bi-exclamation-circle text-danger" style="font-size: 4rem;"></i>
+                <h1 class="mt-3">500</h1>
+                <h3>Internal Server Error</h3>
+                <p class="mb-4">Something went wrong on our server. Please try again later or contact support if the problem persists.</p>
+                <a href="{{ url_for('index') }}" class="btn btn-primary">
+                    <i class="bi bi-house"></i> Go to Homepage
+                </a>
+                <a href="{{ url_for('reset') }}" class="btn btn-outline-secondary ms-2">
+                    <i class="bi bi-arrow-counterclockwise"></i> Reset Session
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
